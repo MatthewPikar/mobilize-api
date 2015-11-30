@@ -1,0 +1,28 @@
+{
+  "name": "api",
+  "version": "0.0.0",
+  "description": "API which marshals api calls to microservices.",
+  "author": {
+    "name": "Matthew Pikar",
+    "email": "matthew.pikar@gmail.com"
+  },
+  "private": true,
+  "scripts": {
+    "start": "node ./src/apiService.js"
+  },
+  "dependencies": {
+    "bluebird": "^3.0.5",
+    "body-parser": "^1.14.1",
+    "eraro": "^0.4.1",
+    "express": "^4.13.3",
+    "lodash": "^3.10.1",
+    "parambulator": "^1.5.1",
+    "seneca": "^0.8.0"
+  },
+  "devDependencies": {
+    "assert": "^1.3.0",
+    "mocha": "^2.3.4",
+    "rewire": "^2.5.0",
+    "sinon": "^1.17.2"
+  }
+}
