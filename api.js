@@ -5,6 +5,7 @@
 
 var _ = require('lodash');
 var Promise = require('bluebird');
+var response = require('response');
 
 
 module.exports = function api(options) {
@@ -20,53 +21,44 @@ module.exports = function api(options) {
         endware:noware,
 
         meta:true,
-        pins:'resource'
+        pins: ['resource']
     },options);
 
     var pins = options.pins;
-    pins = pins ? _.isArray(pins) ? pins : [pins] : [];
-    /*if( 0 === pins.length ) {
-     pins.push("resource")
-     }*/
+    pins = pins ? _.isArray(pins) ? pins : [pins] : options.pins;
     for (var i = 0, len = pins.length; i < len; i++) {
         pins[i] = {resourceType: pins[i]};
     }
 
-
     _.each(pins, function (pin) {
-        seneca.add(_.extend({}, pin, {role: 'api', prefix: options.prefix, method: 'get'}), action_get);
-        seneca.add(_.extend({}, pin, {role: 'api', prefix: options.prefix, method: 'put'}), action_put);
-        seneca.add(_.extend({}, pin, {role: 'api', prefix: options.prefix, method: 'post'}), action_post);
-        seneca.add(_.extend({}, pin, {role: 'api', prefix: options.prefix, method: 'delete'}), action_delete);
+        seneca.add(_.extend({}, pin, {role: 'api', prefix: options.prefix, method: 'get'}), getResource);
+        seneca.add(_.extend({}, pin, {role: 'api', prefix: options.prefix, method: 'put'}), putResource);
+        seneca.add(_.extend({}, pin, {role: 'api', prefix: options.prefix, method: 'post'}), postResource);
+        seneca.add(_.extend({}, pin, {role: 'api', prefix: options.prefix, method: 'delete'}), deleteResource);
     });
 
     _.each(pins, function (pin) {
         pin = _.extend({}, pin, {role: 'api', prefix: options.prefix, method: '*'});
 
-        seneca.act('role: web',
-            {
-                use: {
-                    prefix: options.prefix,
-                    pin: pin,
-                    startware: options.startware,
-                    premap: options.premap,
-                    map: {
-                        get: {GET: resolve, alias: ':resource/:id?'},
-                        delete: {DELETE: resolve, alias: ':resource/:id'},
-                        put: {PUT: resolve, alias: ':resource/:id', data: true},
-                        post: {POST: resolve, alias: ':resource', data: true}
-                    },
-                    postmap: options.postmap,
-                    endware: options.endware
-                }
-            },
-            function(err, res)
-                {
+        seneca.act('role: web',{
+            use: {
+                prefix: options.prefix,
+                pin: pin,
+                startware: options.startware,
+                premap: options.premap,
+                map: {
+                    get: {GET: resolve, alias: ':resource/:id?'},
+                    delete: {DELETE: resolve, alias: ':resource/:id'},
+                    put: {PUT: resolve, alias: ':resource/:id', data: true},
+                    post: {POST: resolve, alias: ':resource', data: true}
+                },
+                postmap: options.postmap,
+                endware: options.endware
+            }},
+            function(err, res){
                     if (err) return respond(err, null);
                     else return respond(null, res);
-                }
-        )
-    });
+    })});
 
     function resolve(req,res,args,act,respond) {
         args.name  = req.params.resource;
@@ -75,10 +67,7 @@ module.exports = function api(options) {
     }
 
 
-
-
-
-    function action_get(args,respond){
+    function getResource(args,respond){
         // if id is provided single item is returned
         if (args.id) {
             return seneca.act({role: args.name, cmd: 'get', id: args.id}, function(err, res){
@@ -141,24 +130,18 @@ module.exports = function api(options) {
         }
     }
 
-    function action_put(args,respond) {
+    function putResource(args,respond) {
         return seneca.act({role:args.name, cmd:'modify', id:args.id, movement:args.data.movement}, respond);
     }
 
-    function action_post(args,respond) {
+    function postResource(args,respond) {
         return seneca.act({role:args.name, cmd:'add', movement:args.data.movement}, respond);
     }
 
-    function action_delete(args,respond){
+    function deleteResource(args,respond){
         return seneca.act({role:args.name, cmd:'delete', id:args.id}, respond);
     }
 };
 
-
-function noware(req,res,respond) {
-    return respond();
-}
-
-function parseJSON(o) {
-    return null == o ? {} : _.isString(o) ? JSON.parse(o) : o;
-}
+function noware(req,res,done) {return done();}
+function parseJSON(o) {return (o === null) ? {} : _.isString(o) ? JSON.parse(o) : o;}
