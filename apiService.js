@@ -13,7 +13,7 @@ var seneca = require('seneca')({})
 seneca.act('role:web, list:route', function(err, routes) {
     console.log("\nRoutes: \n");
     routes.forEach(function(entry){
-        console.log(JSON.stringify(entry) + "\n")
+        console.log(JSON.stringify(entry) + "\n");
     });
 });
 
