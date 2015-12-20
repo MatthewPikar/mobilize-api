@@ -9,12 +9,15 @@
   "private": true,
   "scripts": {
     "test": "mocha test/*.test.js",
+    "tst": "node apiService.js debug:true",
     "start": "node apiService.js"
   },
   "dependencies": {
     "body-parser": "^1.14.1",
+    "bunyan": "^1.5.1",
     "eraro": "^0.4.1",
     "express": "^4.13.3",
+    "fs": "0.0.2",
     "lodash": "^3.10.1",
     "parambulator": "^1.5.1",
     "seneca": "^0.8.0"
