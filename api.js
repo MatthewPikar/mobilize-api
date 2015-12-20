@@ -78,8 +78,7 @@ module.exports = function api(options) {
         if (args.id)
             act({role: args.name, cmd: 'get', requestId:generateId(), id: args.id.replace(/[^\w.]/gi, '')})
                 .then( function(res){
-                    if(res.timeout)
-                        return response.forward(res, {latency: (Date.now()-startTime)}, respond); })
+                    return response.forward(res, {latency: (Date.now()-startTime)}, respond); })
                 .catch(function(err){
                     if(err.timeout)
                         return response.make(504, {error: err}, respond);
