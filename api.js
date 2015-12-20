@@ -7,6 +7,7 @@ var _ = require('lodash');
 var Promise = require('bluebird');
 var Response = require('response');
 
+
 // todo: factor out id generation to an external package/service
 // todo: check for proper header fields like: content-type
 // todo: handle service timeouts
@@ -22,21 +23,16 @@ function generateId(){
 
 module.exports = function api(options) {
     var seneca = this;
+    seneca.options({errhandler:errorHandler});
     var act = Promise.promisify(seneca.act, {context:seneca});
 
     options = seneca.util.deepextend({
         prefix: '/api',
-
-        startware:noware,
-        premap:noware,
-        postmap:noware,
-        endware:noware,
-
-        meta:true,
-        pins: ['resource']
+        pins: ['r'],
+        debug: false
     },options);
 
-    var response = new Response({context:'api', debug:true});
+    var response = new Response({context:'api', debug:!!options.debug});
 
     var pins = options.pins;
     pins = pins ? _.isArray(pins) ? pins : [pins] : options.pins;
@@ -45,6 +41,7 @@ module.exports = function api(options) {
 
     _.each(pins, function (pin) {
         seneca.add(_.extend({}, pin, {method: 'get'}),      getResource);
+        seneca.add(_.extend({}, pin, {method: 'query'}),    queryResource);
         seneca.add(_.extend({}, pin, {method: 'put'}),      putResource);
         seneca.add(_.extend({}, pin, {method: 'post'}),     postResource);
         seneca.add(_.extend({}, pin, {method: 'delete'}),   deleteResource);
@@ -57,20 +54,18 @@ module.exports = function api(options) {
             use: {
                 prefix: options.prefix,
                 pin: pin,
-                startware: options.startware,
-                premap: options.premap,
                 map: {
-                    get:    {GET: resolve,      alias: ':resource/:id?'},
-                    delete: {DELETE: resolve,   alias: ':resource/:id'},
-                    put:    {PUT: resolve,      alias: ':resource',     data: true},
-                    post:   {POST: resolve,     alias: ':resource',     data: true}
-                },
-                postmap: options.postmap,
-                endware: options.endware
+                    get:    {GET: middleware,      alias: ':resource/:id?'},
+                    delete: {DELETE: middleware,   alias: ':resource/:id'},
+                    put:    {PUT: middleware,      alias: ':resource',     data: true},
+                    post:   {POST: middleware,     alias: ':resource',     data: true}
+                }
             }}
-        );});
+        )
 
-    function resolve(req,res,args,act,respond) {
+        ;});
+
+    function middleware(req,res,args,act,respond) {
         args.name  = req.params.resource;
 
         return act(args,respond);
@@ -82,8 +77,15 @@ module.exports = function api(options) {
         // if id is provided single item is returned
         if (args.id)
             act({role: args.name, cmd: 'get', requestId:generateId(), id: args.id.replace(/[^\w.]/gi, '')})
-                .then( function(res){ return response.forward(res, {latency: (Date.now()-startTime)}, respond); })
-                .catch(function(err){ return response.make(500, {error: err}, respond); });
+                .then( function(res){
+                    if(res.timeout)
+                        return response.forward(res, {latency: (Date.now()-startTime)}, respond); })
+                .catch(function(err){
+                    if(err.timeout)
+                        return response.make(504, {error: err}, respond);
+                    else
+                        return response.make(500, {error: err}, respond);
+                });
 
         // if id is not provided treat it like a query and return an array of items
         else queryResource(args,respond);
@@ -115,24 +117,40 @@ module.exports = function api(options) {
         }
 
         act(_.extend({role: args.name, cmd: 'query', requestId:generateId()}, queryArgs))
-            .then( function(res){return response.forward(res, {latency: (Date.now()-startTime)}, respond);  })
-            .catch(function(err){return response.make(500, {error: err}, respond);});
+            .then( function(res){
+                return response.forward(res, {latency: (Date.now()-startTime)}, respond);  })
+            .catch(function(err){
+                if(err.timeout)
+                    return response.make(504, {error: err}, respond);
+                else
+                    return response.make(500, {error: err}, respond);
+            });
     }
 
     function putResource(args,respond) {
         var startTime = Date.now();
 
         act({role:args.name, cmd:'modify', requestId:generateId(), resources:args.data.resources})
-            .then( function(res){return response.forward(res, {latency: (Date.now()-startTime)}, respond);  })
-            .catch(function(err){return response.make(500,  {error: err}, respond);});
+            .then( function(res){
+                return response.forward(res, {latency: (Date.now()-startTime)}, respond);  })
+            .catch(function(err){
+                if(err.details.message === '[TIMEOUT]')
+                    return response.make(504, {error: err}, respond);
+                else return response.make(500, {error: err}, respond);
+            });
     }
 
     function postResource(args,respond) {
         var startTime = Date.now();
 
         act({role:args.name, cmd:'add',    requestId:generateId(), resources:args.data.resources})
-            .then( function(res){return response.forward(res, {latency: (Date.now()-startTime)}, respond);  })
-            .catch(function(err){return response.make(500,  {error: err}, respond);});
+            .then( function(res){
+                return response.forward(res, {latency: (Date.now()-startTime)}, respond);  })
+            .catch(function(err){
+                if(err.details.message === '[TIMEOUT]')
+                    return response.make(504, {error: err}, respond);
+                else return response.make(500, {error: err}, respond);
+            });
     }
 
     function deleteResource(args,respond){
@@ -140,8 +158,14 @@ module.exports = function api(options) {
 
         act({role:args.name, cmd:'delete', requestId:generateId(), id:args.id.replace(/[^\w.]/gi, '')})
             .then( function(res){return response.forward(res, {latency: (Date.now()-startTime)}, respond);  })
-            .catch(function(err){return response.make(500, {error: err}, respond);});
+            .catch(function(err){
+                if(err.details.message === '[TIMEOUT]')
+                    return response.make(504, {error: err}, respond);
+                else return response.make(500, {error: err}, respond);
+            });
+    }
+
+    function errorHandler(error){
+        response.make(500, {error: error});
     }
 };
-
-function noware(req,res,done) {return done();}

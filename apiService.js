@@ -3,19 +3,31 @@
  */
 "use strict";
 
-var seneca = require('seneca')({})
-    .use('api.js', {tag$:'api', prefix:'/api/0.1',
+var _ = require('lodash');
+var commandlineParameters = {};
+
+for(var i= 2, len=process.argv.length; i<len; i++){
+    var argument = process.argv[i].split(':');
+    commandlineParameters[argument[0]] = argument[1];
+}
+
+var seneca = require('seneca')()
+    .use('redis-queue-transport')
+    .use('api.js', _.extend({prefix:'/api/0.1',
         pins:['movements','events']
-    })
-    .client({type:'tcp', port:'30010', pin:'role:movements'})
+    }, commandlineParameters))
+    .client({type:'redis-queue', pin:'role:movements,cmd:*'})
+//    .client({type:'tcp', port:'30010', pin:'role:movements'})
     ;
 
-seneca.act('role:web, list:route', function(err, routes) {
-    console.log("\nRoutes: \n");
-    routes.forEach(function(entry){
-        console.log(JSON.stringify(entry) + "\n");
+/*setInterval(function () {
+    seneca.act({role:'movements', cmd:'query', requestId:'foo', query:'foo'}, function(err,res){
+        if(err)
+            console.log("noooo");
+        else if(res)
+            console.log("yesss");
     });
-});
+}, 1111)*/
 
 var app = require('express')()
     .use(require('body-parser').json())
