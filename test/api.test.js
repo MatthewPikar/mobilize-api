@@ -9,8 +9,8 @@ var host = 'http://localhost',
 
 var seneca = require('seneca')({})
     .use('api.js', {prefix:prefix, pins:['movements']})
-    .use('redis-queue-transport')
-    .client({type:'redis-queue', pin:{role:'movements',cmd:'*'}})
+    .use('redis-transport')
+    .client({type:'redis', pin:{role:'movements',cmd:'*'}})
 ;
 
 var app = require('express')()

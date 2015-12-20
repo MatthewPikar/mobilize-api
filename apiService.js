@@ -12,12 +12,11 @@ for(var i= 2, len=process.argv.length; i<len; i++){
 }
 
 var seneca = require('seneca')()
-    .use('redis-queue-transport')
+    .use('redis-transport')
     .use('api.js', _.extend({prefix:'/api/0.1',
         pins:['movements','events']
     }, commandlineParameters))
-    .client({type:'redis-queue', pin:'role:movements,cmd:*'})
-//    .client({type:'tcp', port:'30010', pin:'role:movements'})
+    .client({type:'redis', pin:'role:movements,cmd:*'})
     ;
 
 /*setInterval(function () {
