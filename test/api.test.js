@@ -9,7 +9,9 @@ var host = 'http://localhost',
 
 var seneca = require('seneca')({})
     .use('api.js', {prefix:prefix, pins:['movements']})
-    .client({type:'tcp', port:'30010', pin:'role:movements'});
+    .use('redis-queue-transport')
+    .client({type:'redis-queue', pin:{role:'movements',cmd:'*'}})
+;
 
 var app = require('express')()
     .use(require('body-parser').json())
@@ -28,6 +30,15 @@ describe("api", function(){
         contentType = 'application/json';
 
     var resourceId = [];
+
+/*     var resourceProcess;
+     before(function(){
+         resourceProcess = spawn('node', ['../movements/movementsService.js', 'debug=true']);
+         resourceProcess.on('error', function(err){
+             console.log('Error: Failed to start Movements process!');
+         });
+         console.log('Movements process started.');
+    });*/
 
     describe('post', function() {
         it('Should return a 400 status if any arguments are missing or malformed.', function () {
@@ -223,4 +234,9 @@ describe("api", function(){
                 ]);
         });
     });
+
+/*    after(function(){
+        resourceProcess.kill();
+        console.log('Movements process ended.');
+    });*/
 });
