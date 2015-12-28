@@ -28,8 +28,20 @@ var seneca = require('seneca')()
     });
 }, 1111)*/
 
+
+var allowCrossDomain = function(req, res, next) {
+    res.header('Access-Control-Allow-Origin', 'http://localhost:8000');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+
+    if ('OPTIONS' === req.method) res.sendStatus(200);
+    else next();
+};
+
 var app = require('express')()
     .use(require('body-parser').json())
+    .use(allowCrossDomain)
     .use(seneca.export('web'))
     .listen(8080)
     ;
+
