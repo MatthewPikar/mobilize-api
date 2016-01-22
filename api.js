@@ -200,6 +200,9 @@ module.exports = function api(options) {
     }
 
     function errorHandler(error){
-        response.make(500, {error: error})
+        act({role:'log', cmd:'error', context:'api', error:error})
+            .catch(function(err){ console.error(JSON.stringify(err))})
+        console.error(JSON.stringify(error))
+        //response.make(500, {error: error})
     }
 }
