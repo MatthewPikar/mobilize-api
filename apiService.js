@@ -11,9 +11,12 @@ for(var i= 2, len=process.argv.length; i<len; i++){
     commandlineParameters[argument[0]] = argument[1]
 }
 
+var transport = require('seneca-redis-transport')
+var api = require('./api.js')
+
 var seneca = require('seneca')()
-    .use('redis-transport')
-    .use('api.js', _.extend({prefix:'/api/0.1',
+    .use(transport)
+    .use(api, _.extend({prefix:'/api/0.1',
         pins:['movements', 'actions', 'users']
     }, commandlineParameters))
     .client({type:'redis', pin:'role:movements,cmd:*'})
