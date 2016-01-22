@@ -13,12 +13,11 @@
   },
   "dependencies": {
     "bluebird": "^2.10.2",
-    "body-parser": "^1.14.1",
+    "body-parser": "^1.14.2",
     "express": "^4.13.3",
     "lodash": "^3.10.1",
-    "parambulator": "^1.5.1",
     "response": "*",
-    "seneca": "^0.8.0",
+    "seneca": "^1.0.0",
     "seneca-redis-transport": "^0.3.0"
   },
   "devDependencies": {
