@@ -4,7 +4,6 @@
 "use strict"
 
 var _ = require('lodash')
-var Promise = require('bluebird')
 var Response = require('response')
 
 
@@ -24,7 +23,6 @@ function generateId(){
 module.exports = function api(options) {
     var seneca = this
     seneca.options({errhandler:errorHandler})
-    var act = Promise.promisify(seneca.act, {context:seneca})
 
     options = seneca.util.deepextend({
         prefix: '/api',
@@ -50,7 +48,7 @@ module.exports = function api(options) {
     _.each(pins, function (pin) {
         pin = _.extend({}, pin, {method: '*'})
 
-        act('role: web',{
+        seneca.act('role: web',{
             use: {
                 prefix: options.prefix,
                 pin: pin,
@@ -118,12 +116,13 @@ module.exports = function api(options) {
 
         // if id is provided single item is returned
         if (args.id)
-            act({role: args.name, cmd: 'get', requestId:generateId(), id: args.id.replace(/[^\w.]/gi, '')})
-                .then( function(res){
-                    return response.forward(res, {latency: (Date.now()-startTime)}, respond) })
-                .catch(function(err){
-                    if(err.timeout) return response.make(504, {error: err}, respond)
-                    else return response.make(500, {error: err}, respond)
+            seneca.act({role: args.name, cmd: 'get', requestId:generateId(), id: args.id.replace(/[^\w.-]/gi, '')},
+                function(err, res){
+                    if (err) {
+                        if(err.timeout) return response.make(504, {error: err}, respond)
+                        else return response.make(500, {error: err}, respond)
+                    }
+                    else return response.forward(res, {latency: (Date.now()-startTime)}, respond)
                 })
 
         // if id is not provided treat it like a query and return an array of items
@@ -155,54 +154,59 @@ module.exports = function api(options) {
             return response.make(400, err)
         }
 
-        act(_.extend({role: args.name, cmd: 'query', requestId:generateId()}, queryArgs))
-            .then( function(res){
-                return response.forward(res, {latency: (Date.now()-startTime)}, respond)  })
-            .catch(function(err){
-                if(err.timeout) return response.make(504, {error: err}, respond)
-                else return response.make(500, {error: err}, respond)
+        seneca.act(_.extend({role: args.name, cmd: 'query', requestId:generateId()}, queryArgs),
+            function(err, res){
+                if (err) {
+                    if(err.timeout) return response.make(504, {error: err}, respond)
+                    else return response.make(500, {error: err}, respond)
+                }
+                else return response.forward(res, {latency: (Date.now()-startTime)}, respond)
             })
     }
 
     function putResource(args,respond) {
         var startTime = Date.now()
 
-        act({role:args.name, cmd:'modify', requestId:generateId(), resources:args.data.resources})
-            .then( function(res){
-                return response.forward(res, {latency: (Date.now()-startTime)}, respond)  })
-            .catch(function(err){
-                if(err.timeout) return response.make(504, {error: err}, respond)
-                else return response.make(500, {error: err}, respond)
+        seneca.act({role:args.name, cmd:'modify', requestId:generateId(), resources:args.data.resources},
+            function(err, res){
+                if (err) {
+                    if(err.timeout) return response.make(504, {error: err}, respond)
+                    else return response.make(500, {error: err}, respond)
+                }
+                else return response.forward(res, {latency: (Date.now()-startTime)}, respond)
             })
     }
 
     function postResource(args,respond) {
         var startTime = Date.now()
 
-        act({role:args.name, cmd:'add',    requestId:generateId(), resources:args.data.resources})
-            .then( function(res){
-                return response.forward(res, {latency: (Date.now()-startTime)}, respond)  })
-            .catch(function(err){
-                if(err.timeout) return response.make(504, {error: err}, respond)
-                else return response.make(500, {error: err}, respond)
+        seneca.act({role:args.name, cmd:'add', requestId:generateId(), resources:args.data.resources},
+            function(err, res){
+                if (err){
+                    if(err.timeout) return response.make(504, {error: err}, respond)
+                    else return response.make(500, {error: err}, respond)
+                }
+                else return response.forward(res, {latency: (Date.now()-startTime)}, respond)
             })
     }
 
     function deleteResource(args,respond){
         var startTime = Date.now()
 
-        act({role:args.name, cmd:'delete', requestId:generateId(), id:args.id.replace(/[^\w.]/gi, '')})
-            .then( function(res){return response.forward(res, {latency: (Date.now()-startTime)}, respond)  })
-            .catch(function(err){
-                if(err.timeout) return response.make(504, {error: err}, respond)
-                else return response.make(500, {error: err}, respond)
+        seneca.act({role:args.name, cmd:'delete', requestId:generateId(), id:args.id.replace(/[^\w.]/gi, '')},
+            function(err, res){
+                if (err){
+                    if(err.timeout) return response.make(504, {error: err}, respond)
+                    else return response.make(500, {error: err}, respond)
+                }
+                else return response.forward(res, {latency: (Date.now()-startTime)}, respond)
             })
     }
 
     function errorHandler(error){
-        act({role:'log', cmd:'error', context:'api', error:error})
-            .catch(function(err){ console.error(JSON.stringify(err))})
         console.error(JSON.stringify(error))
-        //response.make(500, {error: error})
+
+        seneca.act({role:'log', cmd:'error', context:'api', error:error},
+            function(err){ if (err) console.error(JSON.stringify(err)) })
     }
 }
