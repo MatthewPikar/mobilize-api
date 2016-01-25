@@ -204,9 +204,6 @@ module.exports = function api(options) {
     }
 
     function errorHandler(error){
-        console.error(JSON.stringify(error))
-
-        seneca.act({role:'log', cmd:'error', context:'api', error:error},
-            function(err){ if (err) console.error(JSON.stringify(err)) })
+        console.error(error)
     }
 }
