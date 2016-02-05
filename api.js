@@ -43,6 +43,7 @@ module.exports = function api(options) {
         seneca.add(_.extend({}, pin, {method: 'put'}),      putResource)
         seneca.add(_.extend({}, pin, {method: 'post'}),     postResource)
         seneca.add(_.extend({}, pin, {method: 'delete'}),   deleteResource)
+        //seneca.add(_.extend({}, pin, {method: 'upload'}),   uploadResourceFile)
     })
 
     _.each(pins, function (pin) {
@@ -54,9 +55,9 @@ module.exports = function api(options) {
                 pin: pin,
                 map: {
                     get:    {GET: premap,      alias: ':resource/:id?', modify:modifyResponse},
-                    delete: {DELETE: premap,   alias: ':resource/:id', modify:modifyResponse},
-                    put:    {PUT: premap,      alias: ':resource', modify:modifyResponse,     data: true},
-                    post:   {POST: premap,     alias: ':resource', modify:modifyResponse,     data: true}
+                    delete: {DELETE: premap,   alias: ':resource/:id',  modify:modifyResponse},
+                    put:    {PUT: premap,      alias: ':resource/:id',  modify:modifyResponse,  data: true},
+                    post:   {POST: premap,     alias: ':resource',      modify:modifyResponse,  data: true}
                 }
             }}
         )
@@ -116,7 +117,7 @@ module.exports = function api(options) {
 
         // if id is provided single item is returned
         if (args.id)
-            seneca.act({role: args.name, cmd: 'get', requestId:generateId(), id: args.id.replace(/[^\w.-]/gi, '')},
+            seneca.act({role: args.name, cmd: 'get', requestId:generateId(), id: args.id.replace(/[^\w-]/gi, '')},
                 function(err, res){
                     if (err) {
                         if(err.timeout) return response.make(504, {error: err}, respond)
@@ -167,7 +168,15 @@ module.exports = function api(options) {
     function putResource(args,respond) {
         var startTime = Date.now()
 
-        seneca.act({role:args.name, cmd:'modify', requestId:generateId(), resources:args.data.resources},
+        console.log(args.data)
+        seneca.act(
+            {
+                role:args.name,
+                cmd:'modify',
+                requestId:generateId(),
+                id: args.data.id.replace(/[^\w-]/gi, ''),
+                resource:args.data
+            },
             function(err, res){
                 if (err) {
                     if(err.timeout) return response.make(504, {error: err}, respond)
