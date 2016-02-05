@@ -17,21 +17,12 @@ var api = require('./api.js')
 var seneca = require('seneca')()
     .use(transport)
     .use(api, _.extend({prefix:'/api/0.1',
-        pins:['movements', 'actions', 'users']
+        pins:['movements','events','actions', 'users']
     }, commandlineParameters))
     .client({type:'redis', pin:'role:movements,cmd:*'})
+    .client({type:'redis', pin:'role:events,cmd:*'})
     .client({type:'redis', pin:'role:actions,cmd:*'})
     .client({type:'redis', pin:'role:users,cmd:*'})
-
-/*setInterval(function () {
-    seneca.act({role:'movements', cmd:'query', requestId:'foo', query:'foo'}, function(err,res){
-        if(err)
-            console.log("noooo");
-        else if(res)
-            console.log("yesss");
-    });
-}, 1111)*/
-
 
 var allowCrossDomain = function(req, res, next) {
     res.header('Access-Control-Allow-Origin', 'http://localhost:8000')
