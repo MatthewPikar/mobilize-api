@@ -149,12 +149,19 @@ module.exports = function api(options) {
                 queryArgs = _.extend(queryArgs, {limit: parseInt(args.limit, 10)})
             if (typeof args.skip === "string")
                 queryArgs = _.extend(queryArgs, {skip: parseInt(args.skip, 10)})
-            if (typeof args.query === "string")
-                queryArgs = _.extend(queryArgs, {query: args.query.replace(/[^\w\s]/gi, ' ')})
+            if (typeof args.query === "string") {
+                var q = args.query.split(','),
+                    result = {}
+                for (var i= 0, len= q.length; i<len; i++){
+                    var tokens = q[i].split(':')
+                    result[tokens[0].replace(/[^\w]/gi, '')] = tokens[1].replace(/[^\w\s-]/gi, '')
+                }
+                queryArgs = _.extend(queryArgs, {query: result})
+            }
         } catch (err) {
             return response.make(400, err)
         }
-
+console.log(queryArgs)
         seneca.act(_.extend({role: args.name, cmd: 'query', requestId:generateId()}, queryArgs),
             function(err, res){
                 if (err) {
