@@ -54,10 +54,10 @@ module.exports = function api(options) {
                 prefix: options.prefix,
                 pin: pin,
                 map: {
-                    get:    {GET: premap,      alias: ':resource/:id?', modify:modifyResponse},
-                    delete: {DELETE: premap,   alias: ':resource/:id',  modify:modifyResponse},
-                    put:    {PUT: premap,      alias: ':resource/:id',  modify:modifyResponse,  data: true},
-                    post:   {POST: premap,     alias: ':resource',      modify:modifyResponse,  data: true}
+                    get:    {GET: premap,      alias: ':resourceType/:id?', modify:modifyResponse},
+                    delete: {DELETE: premap,   alias: ':resourceType/:id',  modify:modifyResponse},
+                    put:    {PUT: premap,      alias: ':resourceType/:id',  modify:modifyResponse,  data: true},
+                    post:   {POST: premap,     alias: ':resourceType',      modify:modifyResponse,  data: true}
                 }
             }}
         )
@@ -65,7 +65,7 @@ module.exports = function api(options) {
         })
 
     function premap(req,res,args,act,respond) {
-        args.name  = req.params.resource
+        args.name  = req.params.resourceType
 
         return act(args,respond)
     }
@@ -161,7 +161,7 @@ module.exports = function api(options) {
         } catch (err) {
             return response.make(400, err)
         }
-console.log(queryArgs)
+
         seneca.act(_.extend({role: args.name, cmd: 'query', requestId:generateId()}, queryArgs),
             function(err, res){
                 if (err) {
@@ -196,7 +196,8 @@ console.log(queryArgs)
     function postResource(args,respond) {
         var startTime = Date.now()
 
-        seneca.act({role:args.name, cmd:'add', requestId:generateId(), resources:args.data.resources},
+        seneca.act({role:args.name, cmd:'add', requestId:generateId(),
+            resources: args.data.resources ? args.data.resources : [args.data]},
             function(err, res){
                 if (err){
                     if(err.timeout) return response.make(504, {error: err}, respond)
@@ -209,7 +210,7 @@ console.log(queryArgs)
     function deleteResource(args,respond){
         var startTime = Date.now()
 
-        seneca.act({role:args.name, cmd:'delete', requestId:generateId(), id:args.id.replace(/[^\w.]/gi, '')},
+        seneca.act({role:args.name, cmd:'delete', requestId:generateId(), id:args.id.replace(/[^\w-]/gi, '')},
             function(err, res){
                 if (err){
                     if(err.timeout) return response.make(504, {error: err}, respond)
