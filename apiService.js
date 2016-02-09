@@ -17,10 +17,11 @@ var api = require('./api.js')
 var seneca = require('seneca')()
     .use(transport)
     .use(api, _.extend({prefix:'/api/0.1',
-        pins:['movements','events','actions', 'users']
+        pins:['movements','events','posts','actions', 'users']
     }, commandlineParameters))
     .client({type:'redis', pin:'role:movements,cmd:*'})
     .client({type:'redis', pin:'role:events,cmd:*'})
+    .client({type:'redis', pin:'role:posts,cmd:*'})
     .client({type:'redis', pin:'role:actions,cmd:*'})
     .client({type:'redis', pin:'role:users,cmd:*'})
 
